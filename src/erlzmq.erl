@@ -39,10 +39,14 @@
          send/3,
          sendmsg/2,
          sendmsg/3,
+         send_multipart/2,
+         send_multipart/3,
          recv/1,
          recv/2,
          recvmsg/1,
          recvmsg/2,
+         recv_multipart/1,
+         recv_multipart/2,
          poll/3,
          setsockopt/3,
          getsockopt/2,
@@ -204,6 +208,26 @@ send({I, Socket}, Binary, Flags)
     when is_integer(I), is_binary(Binary), is_list(Flags) ->
     erlzmq_nif:socket_command(Socket, ?ERLZMQ_SOCKET_COMMAND_SEND, {Binary, sendrecv_flags(Flags)}).
 
+
+%% @equiv send_multipart(Socket, Parts, [])
+-spec send_multipart(erlzmq_socket(),
+           Parts :: list(binary())) ->
+    ok |
+    erlzmq_error().
+send_multipart(Socket, Parts) ->
+    send_multipart(Socket, Parts, []).
+
+%% @doc Send a multi part message on a socket.
+%% @end
+-spec send_multipart(erlzmq_socket(),
+           Parts :: list(binary()),
+           Flags :: erlzmq_send_recv_flags()) ->
+    ok |
+    erlzmq_error().
+send_multipart({I, Socket}, Parts, Flags)
+    when is_integer(I), is_list(Parts), is_list(Flags) ->
+    erlzmq_nif:socket_command(Socket, ?ERLZMQ_SOCKET_COMMAND_SEND_MULTIPART, {Parts, sendrecv_flags(Flags)}).
+
 %% @equiv send(Socket, Msg, [])
 %% @doc This function exists for zeromq api compatibility and doesn't
 %% actually provide any different functionality then what you get with
@@ -251,6 +275,22 @@ recv(Socket) ->
 recv({I, Socket}, Flags)
     when is_integer(I), is_list(Flags) ->
     erlzmq_nif:socket_command(Socket, ?ERLZMQ_SOCKET_COMMAND_RECV, {sendrecv_flags(Flags)}).
+
+%% @equiv recv_multipart(Socket, [])
+-spec recv_multipart(Socket :: erlzmq_socket()) ->
+    {ok, list(erlzmq_data())} |
+    erlzmq_error().
+recv_multipart(Socket) ->
+    recv_multipart(Socket, []).
+
+%% @doc Receive a multipart message from a socket.
+-spec recv_multipart(Socket :: erlzmq_socket(),
+           Flags :: erlzmq_send_recv_flags()) ->
+    {ok, list(erlzmq_data())} |
+    erlzmq_error().
+recv_multipart({I, Socket}, Flags)
+    when is_integer(I), is_list(Flags) ->
+    erlzmq_nif:socket_command(Socket, ?ERLZMQ_SOCKET_COMMAND_RECV_MULTIPART, {sendrecv_flags(Flags)}).
 
 %% @equiv recv(Socket, 0)
 %% @doc This function exists for zeromq api compatibility and doesn't

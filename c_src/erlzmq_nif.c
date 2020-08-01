@@ -111,6 +111,8 @@ SOCKET_COMMAND(erlzmq_socket_command_send);
 SOCKET_COMMAND(erlzmq_socket_command_recv);
 SOCKET_COMMAND(erlzmq_socket_command_poll);
 SOCKET_COMMAND(erlzmq_socket_command_close);
+SOCKET_COMMAND(erlzmq_socket_command_send_multipart);
+SOCKET_COMMAND(erlzmq_socket_command_recv_multipart);
 NIF(erlzmq_nif_term);
 NIF(erlzmq_nif_ctx_get);
 NIF(erlzmq_nif_ctx_set);
@@ -149,7 +151,7 @@ static ErlNifFunc nif_funcs[] = {
   {"version", 0, erlzmq_nif_version, 0}
 };
 
-#define SOCKET_COMMANDS_COUNT 10
+#define SOCKET_COMMANDS_COUNT 12
 static ERL_NIF_TERM (*socket_commands[SOCKET_COMMANDS_COUNT])(erlzmq_socket_t* socket, ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) = {
   erlzmq_socket_command_bind,
   erlzmq_socket_command_unbind,
@@ -160,7 +162,9 @@ static ERL_NIF_TERM (*socket_commands[SOCKET_COMMANDS_COUNT])(erlzmq_socket_t* s
   erlzmq_socket_command_setsockopt,
   erlzmq_socket_command_getsockopt,
   erlzmq_socket_command_close,
-  erlzmq_socket_command_poll
+  erlzmq_socket_command_poll,
+  erlzmq_socket_command_send_multipart,
+  erlzmq_socket_command_recv_multipart
 };
 
 NIF(erlzmq_nif_context)
@@ -877,6 +881,71 @@ SOCKET_COMMAND(erlzmq_socket_command_send)
   return result;
 }
 
+SOCKET_COMMAND(erlzmq_socket_command_send_multipart)
+{
+  assert(argc == 2);
+  int flags;
+
+  assert(socket->socket_zmq);
+
+  unsigned n;
+  if (! enif_get_list_length(env, argv[0], &n) || n == 0) {
+    return enif_make_badarg(env);
+  }
+
+  if (! enif_get_int(env, argv[1], &flags)) {
+    return enif_make_badarg(env);
+  }
+
+  ERL_NIF_TERM result = enif_make_atom(env, "ok");
+  ERL_NIF_TERM head, tail;
+
+  int initialized_messages = 0;
+  zmq_msg_t *msg = enif_alloc(n * sizeof(zmq_msg_t));
+  if (! msg) {
+      result = return_zmq_errno(env, ENOMEM);
+      goto cleanup;
+  }
+
+  enif_get_list_cell(env, argv[0], &head, &tail);
+  for (int i = 0; i<n; i++) {
+    ErlNifBinary binary;
+    if (! enif_inspect_binary(env, head, &binary)) {
+      result = enif_make_badarg(env);
+      goto cleanup;
+    }
+    if (zmq_msg_init_size(&msg[i], binary.size)) {
+      result = return_zmq_errno(env, zmq_errno());
+      goto cleanup;
+    }
+    initialized_messages++;
+    void * data = zmq_msg_data(&msg[i]);
+    if (!data) {
+      result = return_zmq_errno(env, ENOMEM);
+      goto cleanup;
+    }
+    memcpy(data, binary.data, binary.size);
+    enif_get_list_cell(env, tail, &head, &tail);
+  }
+
+  for (int i = 0; i < n; i++) {
+    int sndmore = (i < n-1) ? ZMQ_SNDMORE : 0;
+    if (zmq_sendmsg(socket->socket_zmq, &msg[i], flags|sndmore) == -1) {
+      result = return_zmq_errno(env, zmq_errno());
+      goto cleanup;
+    }
+  }
+
+ cleanup:
+  if (msg) {
+    enif_free(msg);
+  }
+  for (int i = 0; i < initialized_messages; i++) {
+    zmq_msg_close(&msg[i]);
+  }
+  return result;
+}
+
 SOCKET_COMMAND(erlzmq_socket_command_recv)
 {
   assert(argc == 1);
@@ -918,6 +987,61 @@ SOCKET_COMMAND(erlzmq_socket_command_recv)
   assert(ret == 0);
 
   return result;
+}
+
+SOCKET_COMMAND(erlzmq_socket_command_recv_multipart)
+{
+  assert(argc == 1);
+  int flags;
+
+  if (! enif_get_int(env, argv[0], &flags)) {
+    return enif_make_badarg(env);
+  }
+
+  assert(socket->socket_zmq);
+
+  ERL_NIF_TERM list = enif_make_list_from_array(env, NULL, 0);
+
+  for (;;) {
+    zmq_msg_t msg;
+    if (zmq_msg_init(&msg)) {
+      return return_zmq_errno(env, zmq_errno());
+    }
+
+    if (zmq_recvmsg(socket->socket_zmq, &msg, flags) == -1) {
+      return return_zmq_errno(env, zmq_errno());
+    }
+
+    int msg_size = zmq_msg_size(&msg);
+    ErlNifBinary binary;
+    int alloc_success = enif_alloc_binary(msg_size, &binary);
+    if (!alloc_success) {
+      zmq_msg_close(&msg);
+      return return_zmq_errno(env, ENOMEM);
+    }
+    void * data = zmq_msg_data(&msg);
+    if (! data) {
+      zmq_msg_close(&msg);
+      return return_zmq_errno(env, ENOMEM);
+    }
+    memcpy(binary.data, data, msg_size);
+    list = enif_make_list_cell(env, enif_make_binary(env, &binary), list);
+
+    zmq_msg_close(&msg);
+
+    int rcvmore;
+    size_t len = sizeof(int);
+    if (zmq_getsockopt(socket->socket_zmq, ZMQ_RCVMORE, &rcvmore, &len)) {
+        return return_zmq_errno(env, zmq_errno());
+    }
+
+    if (! rcvmore)
+      break;
+  }
+
+  ERL_NIF_TERM result;
+  enif_make_reverse_list(env, list, &result);
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), result);
 }
 
 SOCKET_COMMAND(erlzmq_socket_command_poll)

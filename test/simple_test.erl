@@ -47,6 +47,18 @@ send_recv_test() ->
     ok = erlzmq:close(S2),
     ok = erlzmq:term(C).
 
+send_recv_multi_part_test() ->
+    {ok, C} = erlzmq:context(),
+    {ok, S1} = erlzmq:socket(C, req),
+    {ok, S2} = erlzmq:socket(C, rep),
+    ok = erlzmq:bind(S2, <<"tcp://127.0.0.1:5559">>),
+    ok = erlzmq:connect(S1, <<"tcp://127.0.0.1:5559">>),
+    ok = erlzmq:send_multipart(S1, [<<"abc">>, <<"def">>]),
+    {ok, [<<"abc">>, <<"def">>]} = erlzmq:recv_multipart(S2),
+    ok = erlzmq:close(S1),
+    ok = erlzmq:close(S2),
+    ok = erlzmq:term(C).
+
 max_sockets_test() ->
     {ok, C} = erlzmq:context(1),
     ok = erlzmq:ctx_set(C, max_sockets, 30),
