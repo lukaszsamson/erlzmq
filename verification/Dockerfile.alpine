@@ -1,9 +1,9 @@
-FROM bitwalker/alpine-elixir:1.8.1
+FROM elixir:1.10.4-alpine
 
-RUN apk upgrade && apk --no-cache add git curl build-base zeromq-dev 
+RUN apk upgrade && apk --no-cache add git curl build-base zeromq-dev
 
 RUN mix local.rebar --force
 
 COPY . .
 
-RUN ./.mix/rebar3 eunit
+RUN /root/.mix/rebar3 eunit
