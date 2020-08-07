@@ -903,8 +903,8 @@ SOCKET_COMMAND(erlzmq_socket_command_send_multipart)
   int initialized_messages = 0;
   zmq_msg_t *msg = enif_alloc(n * sizeof(zmq_msg_t));
   if (! msg) {
-      result = return_zmq_errno(env, ENOMEM);
-      goto cleanup;
+    result = return_zmq_errno(env, ENOMEM);
+    goto cleanup;
   }
 
   enif_get_list_cell(env, argv[0], &head, &tail);
@@ -920,7 +920,7 @@ SOCKET_COMMAND(erlzmq_socket_command_send_multipart)
     }
     initialized_messages++;
     void * data = zmq_msg_data(&msg[i]);
-    if (!data) {
+    if (! data) {
       result = return_zmq_errno(env, ENOMEM);
       goto cleanup;
     }
@@ -928,12 +928,15 @@ SOCKET_COMMAND(erlzmq_socket_command_send_multipart)
     enif_get_list_cell(env, tail, &head, &tail);
   }
 
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < n;) {
     int sndmore = (i < n-1) ? ZMQ_SNDMORE : 0;
     if (zmq_sendmsg(socket->socket_zmq, &msg[i], flags|sndmore) == -1) {
+      if (errno == EINTR && i>0)
+        continue;
       result = return_zmq_errno(env, zmq_errno());
       goto cleanup;
     }
+    i++;
   }
 
  cleanup:
@@ -970,7 +973,7 @@ SOCKET_COMMAND(erlzmq_socket_command_recv)
   else {
     ErlNifBinary binary;
     int alloc_success = enif_alloc_binary(zmq_msg_size(&msg), &binary);
-    if (!alloc_success) {
+    if (! alloc_success) {
       const int ret = zmq_msg_close(&msg);
       assert(ret == 0);
       return return_zmq_errno(env, ENOMEM);
@@ -980,7 +983,7 @@ SOCKET_COMMAND(erlzmq_socket_command_recv)
     memcpy(binary.data, data, zmq_msg_size(&msg));
 
     result = enif_make_tuple2(env, enif_make_atom(env, "ok"),
-                            enif_make_binary(env, &binary));
+                              enif_make_binary(env, &binary));
   }
 
   const int ret = zmq_msg_close(&msg);
@@ -1002,15 +1005,20 @@ SOCKET_COMMAND(erlzmq_socket_command_recv_multipart)
 
   ERL_NIF_TERM list = enif_make_list_from_array(env, NULL, 0);
 
-  for (;;) {
+  for (int i = 0;;) {
     zmq_msg_t msg;
     if (zmq_msg_init(&msg)) {
       return return_zmq_errno(env, zmq_errno());
     }
 
     if (zmq_recvmsg(socket->socket_zmq, &msg, flags) == -1) {
+      if (errno == EINTR && i > 0) {
+        zmq_msg_close(&msg);
+        continue;
+      }
       return return_zmq_errno(env, zmq_errno());
     }
+    i++;
 
     int msg_size = zmq_msg_size(&msg);
     ErlNifBinary binary;
@@ -1032,7 +1040,7 @@ SOCKET_COMMAND(erlzmq_socket_command_recv_multipart)
     int rcvmore;
     size_t len = sizeof(int);
     if (zmq_getsockopt(socket->socket_zmq, ZMQ_RCVMORE, &rcvmore, &len)) {
-        return return_zmq_errno(env, zmq_errno());
+      return return_zmq_errno(env, zmq_errno());
     }
 
     if (! rcvmore)
