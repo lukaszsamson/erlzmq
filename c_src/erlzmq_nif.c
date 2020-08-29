@@ -931,7 +931,7 @@ SOCKET_COMMAND(erlzmq_socket_command_send_multipart)
   for (int i = 0; i < n;) {
     int sndmore = (i < n-1) ? ZMQ_SNDMORE : 0;
     if (zmq_sendmsg(socket->socket_zmq, &msg[i], flags|sndmore) == -1) {
-      if (errno == EINTR && i>0)
+      if (zmq_errno() == EINTR && i>0)
         continue;
       result = return_zmq_errno(env, zmq_errno());
       goto cleanup;
@@ -1012,7 +1012,7 @@ SOCKET_COMMAND(erlzmq_socket_command_recv_multipart)
     }
 
     if (zmq_recvmsg(socket->socket_zmq, &msg, flags) == -1) {
-      if (errno == EINTR && i > 0) {
+      if (zmq_errno() == EINTR && i > 0) {
         zmq_msg_close(&msg);
         continue;
       }
