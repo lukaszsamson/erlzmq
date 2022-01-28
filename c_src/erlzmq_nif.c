@@ -697,13 +697,13 @@ SOCKET_COMMAND(erlzmq_socket_command_getsockopt)
     return enif_make_badarg(env);
   }
 
-  ErlNifBinary value_binary;
+  ERL_NIF_TERM value_binary_term;
+  unsigned char *value_binary;
   int64_t value_int64;
   uint64_t value_uint64;
   char option_value[256];
   int value_int;
   size_t option_len;
-  int alloc_success;
 
   switch(option_name) {
     // int64_t
@@ -767,13 +767,12 @@ SOCKET_COMMAND(erlzmq_socket_command_getsockopt)
                               option_value, &option_len)) {
         return return_zmq_errno(env, zmq_errno());
       }
-      alloc_success = enif_alloc_binary(option_len, &value_binary);
-      if (!alloc_success) {
+      value_binary = enif_make_new_binary(env, option_len, &value_binary_term);
+      if (!value_binary) {
         return return_zmq_errno(env, ENOMEM);
       }
-      memcpy(value_binary.data, option_value, option_len);
-      return enif_make_tuple2(env, enif_make_atom(env, "ok"),
-                              enif_make_binary(env, &value_binary));
+      memcpy(value_binary, option_value, option_len);
+      return enif_make_tuple2(env, enif_make_atom(env, "ok"), value_binary_term);
     // int
     case ZMQ_BACKLOG:
     case ZMQ_LINGER:
@@ -964,9 +963,9 @@ SOCKET_COMMAND(erlzmq_socket_command_recv)
     result = return_zmq_errno(env, error);
   }
   else {
-    ErlNifBinary binary;
-    int alloc_success = enif_alloc_binary(zmq_msg_size(&msg), &binary);
-    if (! alloc_success) {
+    ERL_NIF_TERM binary_term;
+    unsigned char *binary = enif_make_new_binary(env, zmq_msg_size(&msg), &binary_term);
+    if (! binary) {
       const int ret = zmq_msg_close(&msg);
       assert(ret == 0);
       return return_zmq_errno(env, ENOMEM);
@@ -974,8 +973,7 @@ SOCKET_COMMAND(erlzmq_socket_command_recv)
 
     memcpy(binary.data, zmq_msg_data(&msg), zmq_msg_size(&msg));
 
-    result = enif_make_tuple2(env, enif_make_atom(env, "ok"),
-                              enif_make_binary(env, &binary));
+    result = enif_make_tuple2(env, enif_make_atom(env, "ok"), binary_term);
   }
 
   const int ret = zmq_msg_close(&msg);
@@ -1014,15 +1012,16 @@ SOCKET_COMMAND(erlzmq_socket_command_recv_multipart)
     i++;
 
     int msg_size = zmq_msg_size(&msg);
-    ErlNifBinary binary;
-    int alloc_success = enif_alloc_binary(msg_size, &binary);
-    if (!alloc_success) {
-      zmq_msg_close(&msg);
+    ERL_NIF_TERM binary_term;
+    unsigned char *binary = enif_make_new_binary(env, msg_size, &binary_term);
+    if (!binary) {
+      const int ret = zmq_msg_close(&msg);
+      assert(ret == 0);
       return return_zmq_errno(env, ENOMEM);
     }
-    ERL_NIF_TERM message_payload = enif_make_binary(env, &binary);
-    memcpy(binary.data, zmq_msg_data(&msg), msg_size);
-    list = enif_make_list_cell(env, message_payload, list);
+
+    memcpy(binary, zmq_msg_data(&msg), msg_size);
+    list = enif_make_list_cell(env, binary_term, list);
 
     zmq_msg_close(&msg);
 
@@ -1262,26 +1261,22 @@ NIF(erlzmq_nif_curve_keypair)
 {
   char public[41];
   char secret[41];
-  ErlNifBinary pub_bin;
-  ErlNifBinary sec_bin;
+  ERL_NIF_TERM pub_bin_term;
+  ERL_NIF_TERM sec_bin_term;
   if (zmq_curve_keypair(public, secret)) {
     return return_zmq_errno(env, zmq_errno());
   }
-  int alloc_success = enif_alloc_binary(40, &pub_bin);
-  if (!alloc_success) {
+  unsigned char *pub_bin = enif_make_new_binary(env, 40, &pub_bin_term);
+  if (!pub_bin) {
       return return_zmq_errno(env, ENOMEM);
   }
-  alloc_success = enif_alloc_binary(40, &sec_bin);
-  if (!alloc_success) {
-      enif_release_binary(&pub_bin);
+  unsigned char *sec_bin = enif_make_new_binary(env, 40, &sec_bin_term);
+  if (!sec_bin) {
       return return_zmq_errno(env, ENOMEM);
   }
-  memcpy(pub_bin.data, public, 40);
-  memcpy(sec_bin.data, secret, 40);
-  return enif_make_tuple3(env, enif_make_atom(env, "ok"),
-                          enif_make_binary(env, &pub_bin),
-                          enif_make_binary(env, &sec_bin));
-
+  memcpy(pub_bin, public, 40);
+  memcpy(sec_bin, secret, 40);
+  return enif_make_tuple3(env, enif_make_atom(env, "ok"), pub_bin_term, sec_bin_term);
 }
 
 NIF(erlzmq_nif_z85_decode)
@@ -1303,19 +1298,17 @@ NIF(erlzmq_nif_z85_decode)
   memcpy(z85buf, value_binary.data, value_binary.size);
   z85buf[value_binary.size] = 0;
 
-  ErlNifBinary dec_bin;
+  ERL_NIF_TERM dec_bin_term;
   ERL_NIF_TERM ret;
-  int alloc_success = enif_alloc_binary(dec_size, &dec_bin);
-  if (!alloc_success) {
+  unsigned char *dec_bin = enif_make_new_binary(env, dec_size, &dec_bin_term);
+  if (!dec_bin) {
       free(z85buf);
       return return_zmq_errno(env, ENOMEM);
   }
-  ERL_NIF_TERM decoded_payload = enif_make_binary(env, &dec_bin);
-  if (zmq_z85_decode (dec_bin.data, z85buf) == NULL) {
+  if (zmq_z85_decode (dec_bin, z85buf) == NULL) {
     ret = return_zmq_errno(env, zmq_errno());
   } else {
-    ret = enif_make_tuple2(env, enif_make_atom(env, "ok"),
-                                decoded_payload);
+    ret = enif_make_tuple2(env, enif_make_atom(env, "ok"), dec_bin_term);
   }
   free(z85buf);
   return ret;
@@ -1345,17 +1338,16 @@ NIF(erlzmq_nif_z85_encode)
   if (zmq_z85_encode(z85buf, value_binary.data, value_binary.size) == NULL) {
     ret = return_zmq_errno(env, zmq_errno());
   } else {
-    ErlNifBinary enc_bin;
-    int alloc_success = enif_alloc_binary(enc_size, &enc_bin);
-    if (!alloc_success) {
+    ERL_NIF_TERM enc_bin_term;
+    unsigned char *enc_bin = enif_make_new_binary(env, enc_size, &enc_bin_term);
+    if (!enc_bin) {
       free(z85buf);
       return return_zmq_errno(env, ENOMEM);
     }
 
     // drop NULL terminator
-    memcpy(enc_bin.data, z85buf, enc_size);
-    ret = enif_make_tuple2(env, enif_make_atom(env, "ok"),
-                                enif_make_binary(env, &enc_bin));
+    memcpy(enc_bin, z85buf, enc_size);
+    ret = enif_make_tuple2(env, enif_make_atom(env, "ok"), enc_bin_term);
   }
   free(z85buf);
   return ret;
