@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: test (Erlang/OTP ${{matrix.otp}})
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - otp: 22.x
+          - otp: 23.x
+          - otp: 24.x
+          - otp: 25.x
+    steps:
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+      - name: Install Dependencies
+        run: |
+          apt install libzmq3-dev
+      - name: Build
+        run: rebar3 compile
+      - name: Test
+        run: rebar3 eunit
+      - name: Build docs
+        run: rebar3 edoc
