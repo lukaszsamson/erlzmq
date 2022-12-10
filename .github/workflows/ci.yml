@@ -9,14 +9,12 @@ on:
 jobs:
   test:
     name: test (Erlang/OTP ${{matrix.otp}})
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - otp: 23.x
-          - otp: 24.x
-          - otp: 25.x
+        os: [ubuntu-22.04, ubuntu-20.04, ubuntu-18.04]
+        otp: [25.x, 24.x, 23.x]
     steps:
       - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
@@ -24,6 +22,7 @@ jobs:
           otp-version: ${{matrix.otp}}
       - name: Install Dependencies
         run: |
+          sudo apt update
           sudo apt install libzmq3-dev
       - name: Build
         run: rebar3 compile
