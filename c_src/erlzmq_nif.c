@@ -1004,8 +1004,9 @@ SOCKET_COMMAND(erlzmq_socket_command_recv_multipart)
     }
 
     if (zmq_msg_recv(&msg, socket->socket_zmq, flags) == -1) {
+      const int ret = zmq_msg_close(&msg);
+      assert(ret == 0);
       if (zmq_errno() == EINTR && i > 0) {
-        zmq_msg_close(&msg);
         continue;
       }
       return return_zmq_errno(env, zmq_errno());
