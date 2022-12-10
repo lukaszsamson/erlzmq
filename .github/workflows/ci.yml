@@ -13,13 +13,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-20.04, ubuntu-18.04]
-        otp: [25.x, 24.x, 23.x]
+        include:
+          - otp: 25.x
+            os: ubuntu-22.04
+          - otp: 24.x
+            os: ubuntu-20.04
+          - otp: 23.x
+            os: ubuntu-18.04
     steps:
       - uses: actions/checkout@v3
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
+          install-rebar3: true
       - name: Install Dependencies
         run: |
           sudo apt update
