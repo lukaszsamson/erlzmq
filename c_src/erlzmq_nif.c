@@ -862,10 +862,7 @@ SOCKET_COMMAND(erlzmq_socket_command_send)
     return return_zmq_errno(env, zmq_errno());
   }
 
-  void * data = zmq_msg_data(&msg);
-  assert(data);
-
-  memcpy(data, binary.data, binary.size);
+  memcpy(zmq_msg_data(&msg), binary.data, binary.size);
 
   ERL_NIF_TERM result;
   assert(socket->socket_zmq);
@@ -920,12 +917,7 @@ SOCKET_COMMAND(erlzmq_socket_command_send_multipart)
       goto cleanup;
     }
     initialized_messages++;
-    void * data = zmq_msg_data(&msg[i]);
-    if (! data) {
-      result = return_zmq_errno(env, ENOMEM);
-      goto cleanup;
-    }
-    memcpy(data, binary.data, binary.size);
+    memcpy(zmq_msg_data(&msg[i]), binary.data, binary.size);
     enif_get_list_cell(env, tail, &head, &tail);
   }
 
@@ -979,9 +971,8 @@ SOCKET_COMMAND(erlzmq_socket_command_recv)
       assert(ret == 0);
       return return_zmq_errno(env, ENOMEM);
     }
-    void * data = zmq_msg_data(&msg);
-    assert(data);
-    memcpy(binary.data, data, zmq_msg_size(&msg));
+
+    memcpy(binary.data, zmq_msg_data(&msg), zmq_msg_size(&msg));
 
     result = enif_make_tuple2(env, enif_make_atom(env, "ok"),
                               enif_make_binary(env, &binary));
@@ -1028,13 +1019,9 @@ SOCKET_COMMAND(erlzmq_socket_command_recv_multipart)
       zmq_msg_close(&msg);
       return return_zmq_errno(env, ENOMEM);
     }
-    void * data = zmq_msg_data(&msg);
-    if (! data) {
-      zmq_msg_close(&msg);
-      return return_zmq_errno(env, ENOMEM);
-    }
-    memcpy(binary.data, data, msg_size);
-    list = enif_make_list_cell(env, enif_make_binary(env, &binary), list);
+    ERL_NIF_TERM message_payload = enif_make_binary(env, &binary);
+    memcpy(binary.data, zmq_msg_data(&msg), msg_size);
+    list = enif_make_list_cell(env, message_payload, list);
 
     zmq_msg_close(&msg);
 
@@ -1322,11 +1309,12 @@ NIF(erlzmq_nif_z85_decode)
       free(z85buf);
       return return_zmq_errno(env, ENOMEM);
   }
+  ERL_NIF_TERM decoded_payload = enif_make_binary(env, &dec_bin);
   if (zmq_z85_decode (dec_bin.data, z85buf) == NULL) {
     ret = return_zmq_errno(env, zmq_errno());
   } else {
     ret = enif_make_tuple2(env, enif_make_atom(env, "ok"),
-                                enif_make_binary(env, &dec_bin));
+                                decoded_payload);
   }
   free(z85buf);
   return ret;
