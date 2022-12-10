@@ -14,7 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - otp: 22.x
           - otp: 23.x
           - otp: 24.x
           - otp: 25.x
