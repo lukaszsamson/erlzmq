@@ -971,7 +971,7 @@ SOCKET_COMMAND(erlzmq_socket_command_recv)
       return return_zmq_errno(env, ENOMEM);
     }
 
-    memcpy(binary.data, zmq_msg_data(&msg), zmq_msg_size(&msg));
+    memcpy(binary, zmq_msg_data(&msg), zmq_msg_size(&msg));
 
     result = enif_make_tuple2(env, enif_make_atom(env, "ok"), binary_term);
   }
