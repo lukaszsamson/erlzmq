@@ -868,14 +868,15 @@ SOCKET_COMMAND(erlzmq_socket_command_send)
   assert(socket->socket_zmq);
   if (zmq_msg_send(&msg, socket->socket_zmq, flags) == -1) {
     int const error = zmq_errno();
+    const int ret = zmq_msg_close(&msg);
+    assert(ret == 0);
     result = return_zmq_errno(env, error);
   }
   else {
+    // You do not need to call zmq_msg_close() after a successful zmq_msg_send().
     result = enif_make_atom(env, "ok");
   }
 
-  const int ret = zmq_msg_close(&msg);
-  assert(ret == 0);
   return result;
 }
 
@@ -898,11 +899,10 @@ SOCKET_COMMAND(erlzmq_socket_command_send_multipart)
   ERL_NIF_TERM result = enif_make_atom(env, "ok");
   ERL_NIF_TERM head, tail;
 
-  int initialized_messages = 0;
+  unsigned int initialized_messages = 0, sent_messages = 0;
   zmq_msg_t *msg = enif_alloc(n * sizeof(zmq_msg_t));
   if (! msg) {
-    result = return_zmq_errno(env, ENOMEM);
-    goto cleanup;
+    return return_zmq_errno(env, ENOMEM);
   }
 
   enif_get_list_cell(env, argv[0], &head, &tail);
@@ -921,24 +921,24 @@ SOCKET_COMMAND(erlzmq_socket_command_send_multipart)
     enif_get_list_cell(env, tail, &head, &tail);
   }
 
-  for (unsigned int i = 0; i < n;) {
-    int sndmore = (i < n - 1) ? ZMQ_SNDMORE : 0;
-    if (zmq_msg_send(&msg[i], socket->socket_zmq, flags|sndmore) == -1) {
-      if (zmq_errno() == EINTR && i>0)
+  for (; sent_messages < n;) {
+    int sndmore = (sent_messages < n - 1) ? ZMQ_SNDMORE : 0;
+    if (zmq_msg_send(&msg[sent_messages], socket->socket_zmq, flags|sndmore) == -1) {
+      if (zmq_errno() == EINTR && sent_messages>0)
         continue;
       result = return_zmq_errno(env, zmq_errno());
       goto cleanup;
     }
-    i++;
+    sent_messages++;
   }
 
  cleanup:
-  if (msg) {
-    enif_free(msg);
+  // You do not need to call zmq_msg_close() after a successful zmq_msg_send().
+  for (unsigned int i = sent_messages; i < initialized_messages; i++) {
+    const int ret = zmq_msg_close(&msg[i]);
+    assert(ret == 0);
   }
-  for (int i = 0; i < initialized_messages; i++) {
-    zmq_msg_close(&msg[i]);
-  }
+  enif_free(msg);
   return result;
 }
 
