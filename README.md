@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/lukaszsamson/erlzmq.svg?branch=master)](https://travis-ci.com/lukaszsamson/erlzmq)
+![Build status](https://github.com/lukaszsamson/erlzmq/actions/workflows/ci.yml/badge.svg)
 
 erlzmq_dnif
 =======
@@ -20,6 +20,19 @@ Overview
 The erlzmq application provides high-performance NIF based Erlang
 bindings for the ZeroMQ messaging library.
 
+Installation
+------------
+
+Add reference to the packege from [Hex.pm](https://hex.pm/packages/erlzmq_dnif)
+
+erlang: add to rebar.config
+
+    {erlzmq, "4.1.2", {pkg, erlzmq_dnif}}
+
+elixir: add to mix.exs
+
+    {:erlzmq, "~> 4.1", hex: :erlzmq_dnif}
+
 Downloading
 -----------
 
@@ -35,8 +48,6 @@ Please note that to behave properly on your system ZeroMQ might
 require [some tuning](http://www.zeromq.org/docs:tuning-zeromq).
 
 Install zeromq-dev package for your distro.
-
-For examples see `.travis*’ and `verification/Dockerfile*’.
 
 Build the code
 
