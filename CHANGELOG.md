@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.3] - 2022-12-14
+
+### Fixed
+
+- Build on BSD [Dave Cottlehuber](https://github.com/dch)
+- Fixed memory leaks
+- Unnecessary ZMQ message closes removed
+- Deprecated ZMQ API usages migrated to new API
+
+## [4.1.2] - 2022-01-24
+
+### Fixed
+
+- Handling of iolists in send multipart
+
+## [4.1.1] - 2022-01-24
+
+### Fixed
+
+- Specs improved to allow passing iolists
+
 ## [4.1.0] - 2020-08-31
 
 ### Added
