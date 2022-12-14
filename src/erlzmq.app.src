@@ -2,7 +2,7 @@
  [
   {pkg_name, erlzmq_dnif},
   {description, "Erlang ZeroMQ Dirty NIF"},
-  {vsn, "4.1.2"},
+  {vsn, "4.1.3"},
   {modules, [erlzmq, erlzmq_nif]},
   {registered, []},
   {applications, [
