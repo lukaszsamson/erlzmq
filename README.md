@@ -27,7 +27,7 @@ Add reference to the packege from [Hex.pm](https://hex.pm/packages/erlzmq_dnif)
 
 erlang: add to rebar.config
 
-    {erlzmq, "4.1.2", {pkg, erlzmq_dnif}}
+    {erlzmq, "~> 4.1.3", {pkg, erlzmq_dnif}}
 
 elixir: add to mix.exs
 
