@@ -16,7 +16,7 @@ jobs:
         include:
           - otp: 27.x
             rebar3: 3.23.0
-            os: ubuntu-24.04
+            os: ubuntu-22.04
           - otp: 26.x
             rebar3: 3.22.0
             os: ubuntu-22.04
