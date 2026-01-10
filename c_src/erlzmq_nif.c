@@ -1627,10 +1627,6 @@ NIF(erlzmq_nif_term)
     return enif_make_badarg(env);
   }
 
-  if (context->status != ERLZMQ_CONTEXT_STATUS_READY) {
-    return return_zmq_errno(env, ETERM);
-  }
-
   assert(context->mutex);
   enif_mutex_lock(context->mutex);
 
@@ -1671,9 +1667,7 @@ NIF(erlzmq_nif_ctx_set)
                           (void **) &context)) {
     return enif_make_badarg(env);
   }
-  if (context->status != ERLZMQ_CONTEXT_STATUS_READY) {
-    return return_zmq_errno(env, ETERM);
-  }
+
   int option_name;
 
   if (! enif_get_int(env, argv[1], &option_name)) {
@@ -1733,10 +1727,6 @@ NIF(erlzmq_nif_ctx_get)
   if (! enif_get_resource(env, argv[0], erlzmq_nif_resource_context,
                           (void **) &context)) {
     return enif_make_badarg(env);
-  }
-
-  if (context->status != ERLZMQ_CONTEXT_STATUS_READY) {
-    return return_zmq_errno(env, ETERM);
   }
 
   if (! enif_get_int(env, argv[1], &option_name)) {
