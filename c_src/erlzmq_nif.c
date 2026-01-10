@@ -153,6 +153,7 @@ typedef struct erlzmq_socket {
   int result_ready;
   int init_done;
   int init_errno;
+  int shutdown;  // Signal for thread to exit during cleanup
   erlzmq_socket_request_t request;
   erlzmq_socket_reply_t reply;
 } erlzmq_socket_t;
@@ -245,8 +246,12 @@ NIF(erlzmq_nif_context)
   context->socket_index = 0;
   context->status = ERLZMQ_CONTEXT_STATUS_READY;
 
-  return enif_make_tuple2(env, enif_make_atom(env, "ok"),
+  ERL_NIF_TERM result = enif_make_tuple2(env, enif_make_atom(env, "ok"),
                           enif_make_resource(env, context));
+  // Release our reference - Erlang now owns the resource.
+  // When Erlang's reference is GC'd, the destructor will be called.
+  enif_release_resource(context);
+  return result;
 }
 
 NIF(erlzmq_nif_socket)
@@ -282,6 +287,7 @@ NIF(erlzmq_nif_socket)
   socket->result_ready = 0;
   socket->init_done = 0;
   socket->init_errno = 0;
+  socket->shutdown = 0;
   clear_socket_request(&socket->request);
   clear_socket_reply(&socket->reply);
 
@@ -355,12 +361,14 @@ NIF(erlzmq_nif_socket)
   }
 
   socket->status = ERLZMQ_SOCKET_STATUS_READY;
-  
-  
 
-  return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_tuple2(env,
+  ERL_NIF_TERM result = enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_tuple2(env,
                           enif_make_uint64(env, socket->socket_index),
                           enif_make_resource(env, socket)));
+  // Release our reference - Erlang now owns the resource.
+  // When Erlang's reference is GC'd, the destructor will be called.
+  enif_release_resource(socket);
+  return result;
 }
 
 NIF(erlzmq_nif_socket_command)
@@ -879,9 +887,7 @@ NIF(erlzmq_nif_socket_command)
     }
   }
 
-  if (command_id == 8 && reply.ok) {
-    enif_release_resource(socket);
-  }
+  // Don't release here - Erlang GC will call the destructor
   free_socket_request(&req_cleanup);
   free_socket_reply(&reply);
 
@@ -1651,10 +1657,10 @@ NIF(erlzmq_nif_term)
   else {
     enif_mutex_lock(context->mutex);
     context->status = ERLZMQ_CONTEXT_STATUS_TERMINATED;
+    context->context_zmq = NULL;
     enif_mutex_unlock(context->mutex);
 
-    enif_release_resource(context);
-
+    // Don't release here - Erlang GC will call the destructor
     return enif_make_atom(env, "ok");
   }
 }
@@ -2115,32 +2121,59 @@ static ERL_NIF_TERM return_zmq_errno(ErlNifEnv* env, int const value)
 }
 
 static void context_destructor(ErlNifEnv * env, erlzmq_context_t * context) {
+  // Handle cleanup even if term() wasn't called (best-effort cleanup)
   if (context->status != ERLZMQ_CONTEXT_STATUS_TERMINATED) {
-    fprintf(stderr, "destructor reached for context while not terminated\n");
-    assert(0);
+    // Context wasn't properly terminated - try to clean up
+    // Note: zmq_ctx_term may block if sockets are still open
+    if (context->context_zmq) {
+      zmq_ctx_term(context->context_zmq);
+      context->context_zmq = NULL;
+    }
+    context->status = ERLZMQ_CONTEXT_STATUS_TERMINATED;
   }
 
   if (context->mutex) {
     enif_mutex_destroy(context->mutex);
-    context->mutex = 0;
+    context->mutex = NULL;
   }
 }
 
 static void socket_destructor(ErlNifEnv * env, erlzmq_socket_t * socket) {
-  enif_release_resource(socket->context);
-
+  // Handle cleanup even if close() wasn't called (best-effort cleanup)
   if (socket->status != ERLZMQ_SOCKET_STATUS_CLOSED) {
-    fprintf(stderr, "destructor reached for socket %" PRIu64 " while not closed\n", socket->socket_index);
-    assert(0);
+    // Socket wasn't properly closed - need to signal thread and clean up
+    if (socket->socket_command_mutex) {
+      enif_mutex_lock(socket->socket_command_mutex);
+
+      // Close the zmq socket to unblock any blocking operations
+      if (socket->socket_zmq) {
+        zmq_close(socket->socket_zmq);
+        socket->socket_zmq = NULL;
+      }
+
+      // Signal thread to exit
+      socket->shutdown = 1;
+      socket->status = ERLZMQ_SOCKET_STATUS_CLOSED;
+
+      if (socket->socket_command_cond) {
+        enif_cond_signal(socket->socket_command_cond);
+      }
+
+      enif_mutex_unlock(socket->socket_command_mutex);
+    }
   }
 
+  // Join the thread if it exists
   if (socket->socket_thread) {
     int value_errno = enif_thread_join(socket->socket_thread, NULL);
-    if (value_errno != 0) {
-      fprintf(stderr, "unable to join socket thread %" PRIu64 ": %s\n", socket->socket_index, strerror(value_errno));
-      assert(0);
-    }
+    (void)value_errno;  // Ignore errors - best effort cleanup
     socket->socket_thread = 0;
+  }
+
+  // Release context reference
+  if (socket->context) {
+    enif_release_resource(socket->context);
+    socket->context = NULL;
   }
 
   free_socket_request(&socket->request);
@@ -2148,22 +2181,22 @@ static void socket_destructor(ErlNifEnv * env, erlzmq_socket_t * socket) {
 
   if (socket->mutex) {
     enif_mutex_destroy(socket->mutex);
-    socket->mutex = 0;
+    socket->mutex = NULL;
   }
 
   if (socket->socket_command_mutex) {
     enif_mutex_destroy(socket->socket_command_mutex);
-    socket->socket_command_mutex = 0;
+    socket->socket_command_mutex = NULL;
   }
 
   if (socket->socket_command_cond) {
     enif_cond_destroy(socket->socket_command_cond);
-    socket->socket_command_cond = 0;
+    socket->socket_command_cond = NULL;
   }
 
   if (socket->socket_command_result_cond) {
     enif_cond_destroy(socket->socket_command_result_cond);
-    socket->socket_command_result_cond = 0;
+    socket->socket_command_result_cond = NULL;
   }
 }
 
@@ -2763,8 +2796,14 @@ static void* socket_thread(erlzmq_socket_t *socket) {
   }
 
   for (;;) {
-    while (!socket->command_pending) {
+    while (!socket->command_pending && !socket->shutdown) {
       enif_cond_wait(socket->socket_command_cond, socket->socket_command_mutex);
+    }
+
+    // Check for shutdown signal from destructor
+    if (socket->shutdown) {
+      enif_mutex_unlock(socket->socket_command_mutex);
+      break;
     }
 
     erlzmq_socket_request_t request = socket->request;
