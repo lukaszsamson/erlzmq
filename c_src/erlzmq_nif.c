@@ -304,37 +304,37 @@ NIF(erlzmq_nif_socket)
   socket->socket_index = context->socket_index++;
   enif_mutex_unlock(context->mutex);
 
-  char buffer[64];
-  
-  sprintf(buffer, "erlzmq_socket_t_mutex_%" PRIu64, socket->socket_index);
+  char buffer[80];
+
+  snprintf(buffer, sizeof(buffer), "erlzmq_socket_t_mutex_%" PRIu64, socket->socket_index);
   socket->mutex = enif_mutex_create(buffer);
   if (!socket->mutex) {
     enif_release_resource(socket);
     return return_zmq_errno(env, ENOMEM);
   }
 
-  sprintf(buffer, "erlzmq_socket_t_socket_command_mutex_%" PRIu64, socket->socket_index);
+  snprintf(buffer, sizeof(buffer), "erlzmq_socket_t_socket_command_mutex_%" PRIu64, socket->socket_index);
   socket->socket_command_mutex = enif_mutex_create(buffer);
   if (!socket->socket_command_mutex) {
     enif_release_resource(socket);
     return return_zmq_errno(env, ENOMEM);
   }
 
-  sprintf(buffer, "erlzmq_socket_t_socket_command_cond_%" PRIu64, socket->socket_index);
+  snprintf(buffer, sizeof(buffer), "erlzmq_socket_t_socket_command_cond_%" PRIu64, socket->socket_index);
   socket->socket_command_cond = enif_cond_create(buffer);
   if (!socket->socket_command_cond) {
     enif_release_resource(socket);
     return return_zmq_errno(env, ENOMEM);
   }
 
-  sprintf(buffer, "erlzmq_socket_t_socket_command_result_cond_%" PRIu64, socket->socket_index);
+  snprintf(buffer, sizeof(buffer), "erlzmq_socket_t_socket_command_result_cond_%" PRIu64, socket->socket_index);
   socket->socket_command_result_cond = enif_cond_create(buffer);
   if (!socket->socket_command_result_cond) {
     enif_release_resource(socket);
     return return_zmq_errno(env, ENOMEM);
   }
 
-  sprintf(buffer, "erlzmq_socket_t_thread_%" PRIu64, socket->socket_index);
+  snprintf(buffer, sizeof(buffer), "erlzmq_socket_t_thread_%" PRIu64, socket->socket_index);
 
   enif_mutex_lock(socket->socket_command_mutex);
   int value_errno = enif_thread_create(buffer, &socket->socket_thread, (void * (*)(void*))socket_thread, (void*)socket, NULL);
