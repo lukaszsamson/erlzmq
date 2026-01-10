@@ -564,6 +564,20 @@ NIF(erlzmq_nif_socket_command)
         case ZMQ_PLAIN_PASSWORD:
         case ZMQ_PLAIN_USERNAME:
         #endif
+
+        #ifdef ZMQ_BUILD_DRAFT_API
+        // DRAFT string options
+        case ZMQ_SOCKS_USERNAME:
+        case ZMQ_SOCKS_PASSWORD:
+        case ZMQ_WSS_KEY_PEM:
+        case ZMQ_WSS_CERT_PEM:
+        case ZMQ_WSS_TRUST_PEM:
+        case ZMQ_WSS_HOSTNAME:
+        // DRAFT binary options
+        case ZMQ_HELLO_MSG:
+        case ZMQ_DISCONNECT_MSG:
+        case ZMQ_HICCUP_MSG:
+        #endif
           if (!enif_inspect_iolist_as_binary(env, command_argv[1], &value_binary)) {
             free_socket_request(&req);
             enif_mutex_unlock(socket->mutex);
@@ -683,6 +697,31 @@ NIF(erlzmq_nif_socket_command)
         case ZMQ_REQ_CORRELATE:
         case ZMQ_PROBE_ROUTER:
         case ZMQ_PLAIN_SERVER:
+        #endif
+
+        #ifdef ZMQ_BUILD_DRAFT_API
+        // DRAFT int options
+        case ZMQ_ZAP_ENFORCE_DOMAIN:
+        case ZMQ_LOOPBACK_FASTPATH:
+        case ZMQ_MULTICAST_LOOP:
+        case ZMQ_ROUTER_NOTIFY:
+        case ZMQ_XPUB_MANUAL_LAST_VALUE:
+        case ZMQ_IN_BATCH_SIZE:
+        case ZMQ_OUT_BATCH_SIZE:
+        case ZMQ_WSS_TRUST_SYSTEM:
+        case ZMQ_ONLY_FIRST_SUBSCRIBE:
+        case ZMQ_RECONNECT_STOP:
+        case ZMQ_PRIORITY:
+        case ZMQ_BUSY_POLL:
+        case ZMQ_XSUB_VERBOSE_UNSUBSCRIBE:
+        case ZMQ_NORM_MODE:
+        case ZMQ_NORM_UNICAST_NACK:
+        case ZMQ_NORM_BUFFER_SIZE:
+        case ZMQ_NORM_SEGMENT_SIZE:
+        case ZMQ_NORM_BLOCK_SIZE:
+        case ZMQ_NORM_NUM_PARITY:
+        case ZMQ_NORM_NUM_AUTOPARITY:
+        case ZMQ_NORM_PUSH:
         #endif
 
         // deprecated
@@ -1108,13 +1147,27 @@ SOCKET_COMMAND(erlzmq_socket_command_setsockopt)
     case ZMQ_PLAIN_PASSWORD:
     case ZMQ_PLAIN_USERNAME:
     #endif
+
+    #ifdef ZMQ_BUILD_DRAFT_API
+    // DRAFT string options
+    case ZMQ_SOCKS_USERNAME:
+    case ZMQ_SOCKS_PASSWORD:
+    case ZMQ_WSS_KEY_PEM:
+    case ZMQ_WSS_CERT_PEM:
+    case ZMQ_WSS_TRUST_PEM:
+    case ZMQ_WSS_HOSTNAME:
+    // DRAFT binary options
+    case ZMQ_HELLO_MSG:
+    case ZMQ_DISCONNECT_MSG:
+    case ZMQ_HICCUP_MSG:
+    #endif
       if (! enif_inspect_iolist_as_binary(env, argv[1], &value_binary)) {
         return enif_make_badarg(env);
       }
       option_value = value_binary.data;
       option_len = value_binary.size;
       break;
-    
+
     #if ZMQ_VERSION_MAJOR > 4 || ZMQ_VERSION_MAJOR == 4 && ZMQ_VERSION_MINOR >= 0
     // binary or Z85 string
     case ZMQ_CURVE_PUBLICKEY:
@@ -1200,6 +1253,31 @@ SOCKET_COMMAND(erlzmq_socket_command_setsockopt)
     case ZMQ_REQ_CORRELATE:
     case ZMQ_PROBE_ROUTER:
     case ZMQ_PLAIN_SERVER:
+    #endif
+
+    #ifdef ZMQ_BUILD_DRAFT_API
+    // DRAFT int options
+    case ZMQ_ZAP_ENFORCE_DOMAIN:
+    case ZMQ_LOOPBACK_FASTPATH:
+    case ZMQ_MULTICAST_LOOP:
+    case ZMQ_ROUTER_NOTIFY:
+    case ZMQ_XPUB_MANUAL_LAST_VALUE:
+    case ZMQ_IN_BATCH_SIZE:
+    case ZMQ_OUT_BATCH_SIZE:
+    case ZMQ_WSS_TRUST_SYSTEM:
+    case ZMQ_ONLY_FIRST_SUBSCRIBE:
+    case ZMQ_RECONNECT_STOP:
+    case ZMQ_PRIORITY:
+    case ZMQ_BUSY_POLL:
+    case ZMQ_XSUB_VERBOSE_UNSUBSCRIBE:
+    case ZMQ_NORM_MODE:
+    case ZMQ_NORM_UNICAST_NACK:
+    case ZMQ_NORM_BUFFER_SIZE:
+    case ZMQ_NORM_SEGMENT_SIZE:
+    case ZMQ_NORM_BLOCK_SIZE:
+    case ZMQ_NORM_NUM_PARITY:
+    case ZMQ_NORM_NUM_AUTOPARITY:
+    case ZMQ_NORM_PUSH:
     #endif
 
     // deprecated
@@ -1291,11 +1369,26 @@ SOCKET_COMMAND(erlzmq_socket_command_getsockopt)
     case ZMQ_ZAP_DOMAIN:
     case ZMQ_PLAIN_PASSWORD:
     case ZMQ_PLAIN_USERNAME:
-    
+
     // binary or Z85 string
     case ZMQ_CURVE_PUBLICKEY:
     case ZMQ_CURVE_SECRETKEY:
     case ZMQ_CURVE_SERVERKEY:
+    #endif
+
+    #ifdef ZMQ_BUILD_DRAFT_API
+    // DRAFT string options
+    case ZMQ_SOCKS_USERNAME:
+    case ZMQ_SOCKS_PASSWORD:
+    case ZMQ_WSS_KEY_PEM:
+    case ZMQ_WSS_CERT_PEM:
+    case ZMQ_WSS_TRUST_PEM:
+    case ZMQ_WSS_HOSTNAME:
+    case ZMQ_METADATA:
+    // DRAFT binary options
+    case ZMQ_HELLO_MSG:
+    case ZMQ_DISCONNECT_MSG:
+    case ZMQ_HICCUP_MSG:
     #endif
       option_len = sizeof(option_value);
       assert(socket->socket_zmq);
@@ -1360,6 +1453,33 @@ SOCKET_COMMAND(erlzmq_socket_command_getsockopt)
     case ZMQ_PLAIN_SERVER:
     case ZMQ_MECHANISM:
     #endif
+
+    #ifdef ZMQ_BUILD_DRAFT_API
+    // DRAFT int options
+    case ZMQ_ZAP_ENFORCE_DOMAIN:
+    case ZMQ_LOOPBACK_FASTPATH:
+    case ZMQ_MULTICAST_LOOP:
+    case ZMQ_ROUTER_NOTIFY:
+    case ZMQ_XPUB_MANUAL_LAST_VALUE:
+    case ZMQ_IN_BATCH_SIZE:
+    case ZMQ_OUT_BATCH_SIZE:
+    case ZMQ_WSS_TRUST_SYSTEM:
+    case ZMQ_ONLY_FIRST_SUBSCRIBE:
+    case ZMQ_RECONNECT_STOP:
+    case ZMQ_PRIORITY:
+    case ZMQ_BUSY_POLL:
+    case ZMQ_XSUB_VERBOSE_UNSUBSCRIBE:
+    case ZMQ_TOPICS_COUNT:
+    case ZMQ_NORM_MODE:
+    case ZMQ_NORM_UNICAST_NACK:
+    case ZMQ_NORM_BUFFER_SIZE:
+    case ZMQ_NORM_SEGMENT_SIZE:
+    case ZMQ_NORM_BLOCK_SIZE:
+    case ZMQ_NORM_NUM_PARITY:
+    case ZMQ_NORM_NUM_AUTOPARITY:
+    case ZMQ_NORM_PUSH:
+    #endif
+
     // FIXME SOCKET on Windows, int on POSIX
     case ZMQ_FD:
 
@@ -1705,6 +1825,9 @@ NIF(erlzmq_nif_ctx_set)
     case ZMQ_THREAD_AFFINITY_CPU_REMOVE:
     case ZMQ_THREAD_NAME_PREFIX:
     #endif
+    #ifdef ZMQ_BUILD_DRAFT_API
+    case ZMQ_ZERO_COPY_RECV:
+    #endif
       if (! enif_get_int(env, argv[2], &value_int)) {
         return enif_make_badarg(env);
       }
@@ -1762,6 +1885,9 @@ NIF(erlzmq_nif_ctx_get)
     #if ZMQ_VERSION_MAJOR > 4 || ZMQ_VERSION_MAJOR == 4 && ZMQ_VERSION_MINOR >= 3
     case ZMQ_THREAD_NAME_PREFIX:
     case ZMQ_MSG_T_SIZE:
+    #endif
+    #ifdef ZMQ_BUILD_DRAFT_API
+    case ZMQ_ZERO_COPY_RECV:
     #endif
       assert(context->mutex);
       enif_mutex_lock(context->mutex);
@@ -2527,6 +2653,20 @@ static void socket_exec_request(erlzmq_socket_t *socket, const erlzmq_socket_req
         case ZMQ_CURVE_SECRETKEY:
         case ZMQ_CURVE_SERVERKEY:
         #endif
+        #ifdef ZMQ_BUILD_DRAFT_API
+        // DRAFT string options
+        case ZMQ_SOCKS_USERNAME:
+        case ZMQ_SOCKS_PASSWORD:
+        case ZMQ_WSS_KEY_PEM:
+        case ZMQ_WSS_CERT_PEM:
+        case ZMQ_WSS_TRUST_PEM:
+        case ZMQ_WSS_HOSTNAME:
+        case ZMQ_METADATA:
+        // DRAFT binary options
+        case ZMQ_HELLO_MSG:
+        case ZMQ_DISCONNECT_MSG:
+        case ZMQ_HICCUP_MSG:
+        #endif
           option_len = sizeof(option_value);
           if (zmq_getsockopt(socket->socket_zmq, option_name, option_value, &option_len) != 0) {
             reply->err = zmq_errno();
@@ -2589,6 +2729,31 @@ static void socket_exec_request(erlzmq_socket_t *socket, const erlzmq_socket_req
         case ZMQ_GSSAPI_SERVER:
         case ZMQ_PLAIN_SERVER:
         case ZMQ_MECHANISM:
+        #endif
+        #ifdef ZMQ_BUILD_DRAFT_API
+        // DRAFT int options
+        case ZMQ_ZAP_ENFORCE_DOMAIN:
+        case ZMQ_LOOPBACK_FASTPATH:
+        case ZMQ_MULTICAST_LOOP:
+        case ZMQ_ROUTER_NOTIFY:
+        case ZMQ_XPUB_MANUAL_LAST_VALUE:
+        case ZMQ_IN_BATCH_SIZE:
+        case ZMQ_OUT_BATCH_SIZE:
+        case ZMQ_WSS_TRUST_SYSTEM:
+        case ZMQ_ONLY_FIRST_SUBSCRIBE:
+        case ZMQ_RECONNECT_STOP:
+        case ZMQ_PRIORITY:
+        case ZMQ_BUSY_POLL:
+        case ZMQ_XSUB_VERBOSE_UNSUBSCRIBE:
+        case ZMQ_TOPICS_COUNT:
+        case ZMQ_NORM_MODE:
+        case ZMQ_NORM_UNICAST_NACK:
+        case ZMQ_NORM_BUFFER_SIZE:
+        case ZMQ_NORM_SEGMENT_SIZE:
+        case ZMQ_NORM_BLOCK_SIZE:
+        case ZMQ_NORM_NUM_PARITY:
+        case ZMQ_NORM_NUM_AUTOPARITY:
+        case ZMQ_NORM_PUSH:
         #endif
         case ZMQ_IPV4ONLY:
           option_len = sizeof(value_int);

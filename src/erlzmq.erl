@@ -503,7 +503,26 @@ socket_type(xpub) ->
 socket_type(xsub) ->
     ?'ZMQ_XSUB';
 socket_type(stream) ->
-    ?'ZMQ_STREAM'.
+    ?'ZMQ_STREAM';
+% DRAFT socket types
+socket_type(server) ->
+    ?'ZMQ_SERVER';
+socket_type(client) ->
+    ?'ZMQ_CLIENT';
+socket_type(radio) ->
+    ?'ZMQ_RADIO';
+socket_type(dish) ->
+    ?'ZMQ_DISH';
+socket_type(gather) ->
+    ?'ZMQ_GATHER';
+socket_type(scatter) ->
+    ?'ZMQ_SCATTER';
+socket_type(dgram) ->
+    ?'ZMQ_DGRAM';
+socket_type(peer) ->
+    ?'ZMQ_PEER';
+socket_type(channel) ->
+    ?'ZMQ_CHANNEL'.
 
 -spec sendrecv_flags(Flags :: erlzmq_send_recv_flags()) ->
     integer().
@@ -645,4 +664,37 @@ option_name(max_msgsz) -> ?'ZMQ_MAX_MSGSZ';
 option_name(msg_t_size) -> ?'ZMQ_MSG_T_SIZE';
 option_name(thread_affinity_cpu_add) -> ?'ZMQ_THREAD_AFFINITY_CPU_ADD';
 option_name(thread_affinity_cpu_remove) -> ?'ZMQ_THREAD_AFFINITY_CPU_REMOVE';
-option_name(thread_name_prefix) -> ?'ZMQ_THREAD_NAME_PREFIX'.
+option_name(thread_name_prefix) -> ?'ZMQ_THREAD_NAME_PREFIX';
+% DRAFT socket options
+option_name(zap_enforce_domain) -> ?'ZMQ_ZAP_ENFORCE_DOMAIN';
+option_name(loopback_fastpath) -> ?'ZMQ_LOOPBACK_FASTPATH';
+option_name(socks_username) -> ?'ZMQ_SOCKS_USERNAME';
+option_name(socks_password) -> ?'ZMQ_SOCKS_PASSWORD';
+option_name(multicast_loop) -> ?'ZMQ_MULTICAST_LOOP';
+option_name(router_notify) -> ?'ZMQ_ROUTER_NOTIFY';
+option_name(xpub_manual_last_value) -> ?'ZMQ_XPUB_MANUAL_LAST_VALUE';
+option_name(in_batch_size) -> ?'ZMQ_IN_BATCH_SIZE';
+option_name(out_batch_size) -> ?'ZMQ_OUT_BATCH_SIZE';
+option_name(wss_key_pem) -> ?'ZMQ_WSS_KEY_PEM';
+option_name(wss_cert_pem) -> ?'ZMQ_WSS_CERT_PEM';
+option_name(wss_trust_pem) -> ?'ZMQ_WSS_TRUST_PEM';
+option_name(wss_hostname) -> ?'ZMQ_WSS_HOSTNAME';
+option_name(wss_trust_system) -> ?'ZMQ_WSS_TRUST_SYSTEM';
+option_name(only_first_subscribe) -> ?'ZMQ_ONLY_FIRST_SUBSCRIBE';
+option_name(reconnect_stop) -> ?'ZMQ_RECONNECT_STOP';
+option_name(hello_msg) -> ?'ZMQ_HELLO_MSG';
+option_name(disconnect_msg) -> ?'ZMQ_DISCONNECT_MSG';
+option_name(priority) -> ?'ZMQ_PRIORITY';
+option_name(busy_poll) -> ?'ZMQ_BUSY_POLL';
+option_name(hiccup_msg) -> ?'ZMQ_HICCUP_MSG';
+option_name(xsub_verbose_unsubscribe) -> ?'ZMQ_XSUB_VERBOSE_UNSUBSCRIBE';
+option_name(norm_mode) -> ?'ZMQ_NORM_MODE';
+option_name(norm_unicast_nack) -> ?'ZMQ_NORM_UNICAST_NACK';
+option_name(norm_buffer_size) -> ?'ZMQ_NORM_BUFFER_SIZE';
+option_name(norm_segment_size) -> ?'ZMQ_NORM_SEGMENT_SIZE';
+option_name(norm_block_size) -> ?'ZMQ_NORM_BLOCK_SIZE';
+option_name(norm_num_parity) -> ?'ZMQ_NORM_NUM_PARITY';
+option_name(norm_num_autoparity) -> ?'ZMQ_NORM_NUM_AUTOPARITY';
+option_name(norm_push) -> ?'ZMQ_NORM_PUSH';
+% DRAFT context option
+option_name(zero_copy_recv) -> ?'ZMQ_ZERO_COPY_RECV'.

@@ -10,6 +10,16 @@
 -define('ZMQ_XPUB',         9).
 -define('ZMQ_XSUB',        10).
 -define('ZMQ_STREAM',      11).
+% DRAFT socket types
+-define('ZMQ_SERVER',      12).
+-define('ZMQ_CLIENT',      13).
+-define('ZMQ_RADIO',       14).
+-define('ZMQ_DISH',        15).
+-define('ZMQ_GATHER',      16).
+-define('ZMQ_SCATTER',     17).
+-define('ZMQ_DGRAM',       18).
+-define('ZMQ_PEER',        19).
+-define('ZMQ_CHANNEL',     20).
 % deprecated
 -define('ZMQ_XREQ',         ?'ZMQ_DEALER').
 -define('ZMQ_XREP',         ?'ZMQ_ROUTER').
@@ -92,6 +102,37 @@
 -define('ZMQ_GSSAPI_PRINCIPAL_NAMETYPE', 90).
 -define('ZMQ_GSSAPI_SERVICE_PRINCIPAL_NAMETYPE', 91).
 -define('ZMQ_BINDTODEVICE', 92).
+% DRAFT socket options
+-define('ZMQ_ZAP_ENFORCE_DOMAIN', 93).
+-define('ZMQ_LOOPBACK_FASTPATH', 94).
+-define('ZMQ_SOCKS_USERNAME', 95).
+-define('ZMQ_SOCKS_PASSWORD', 96).
+-define('ZMQ_MULTICAST_LOOP', 97).
+-define('ZMQ_ROUTER_NOTIFY', 98).
+-define('ZMQ_XPUB_MANUAL_LAST_VALUE', 99).
+-define('ZMQ_IN_BATCH_SIZE', 101).
+-define('ZMQ_OUT_BATCH_SIZE', 102).
+-define('ZMQ_WSS_KEY_PEM', 103).
+-define('ZMQ_WSS_CERT_PEM', 104).
+-define('ZMQ_WSS_TRUST_PEM', 105).
+-define('ZMQ_WSS_HOSTNAME', 106).
+-define('ZMQ_WSS_TRUST_SYSTEM', 107).
+-define('ZMQ_ONLY_FIRST_SUBSCRIBE', 108).
+-define('ZMQ_RECONNECT_STOP', 109).
+-define('ZMQ_HELLO_MSG', 110).
+-define('ZMQ_DISCONNECT_MSG', 111).
+-define('ZMQ_PRIORITY', 112).
+-define('ZMQ_BUSY_POLL', 113).
+-define('ZMQ_HICCUP_MSG', 114).
+-define('ZMQ_XSUB_VERBOSE_UNSUBSCRIBE', 115).
+-define('ZMQ_NORM_MODE', 118).
+-define('ZMQ_NORM_UNICAST_NACK', 119).
+-define('ZMQ_NORM_BUFFER_SIZE', 120).
+-define('ZMQ_NORM_SEGMENT_SIZE', 121).
+-define('ZMQ_NORM_BLOCK_SIZE', 122).
+-define('ZMQ_NORM_NUM_PARITY', 123).
+-define('ZMQ_NORM_NUM_AUTOPARITY', 124).
+-define('ZMQ_NORM_PUSH', 125).
 % deprecated
 -define('ZMQ_TCP_ACCEPT_FILTER', 38).
 -define('ZMQ_IPV4ONLY', 31).
@@ -123,6 +164,8 @@
 -define('ZMQ_THREAD_AFFINITY_CPU_ADD', 7).
 -define('ZMQ_THREAD_AFFINITY_CPU_REMOVE', 8).
 -define('ZMQ_THREAD_NAME_PREFIX', 9).
+% DRAFT context options
+-define('ZMQ_ZERO_COPY_RECV', 10).
 
 % ZMQ Context options
 -define('ERLZMQ_SOCKET_COMMAND_BIND', 0).
@@ -150,7 +193,8 @@
 %% <i>For more information see
 %% <a href="http://api.zeromq.org/master:zmq_socket">zmq_socket</a></i>
 -type erlzmq_socket_type() :: pair | pub | sub | req | rep | dealer | router | xreq | xrep |
-                            pull | push | xpub | xsub | stream.
+                            pull | push | xpub | xsub | stream |
+                            server | client | radio | dish | gather | scatter | dgram | peer | channel.
 
 %% The endpoint argument is a string consisting of two parts:
 %% <b>transport://address</b><br />
@@ -209,91 +253,34 @@
 %% <i>For more information see
 %% <a href="http://api.zeromq.org/master:zmq_setsockopt">zmq_setsockopt</a>
 %% and <a href="http://api.zeromq.org/master:zmq_getsockopt">zmq_getsockopt</a></i>
--type erlzmq_sockopt() :: 
-    affinity |
-    routing_id |
-    subscribe |
-    unsubscribe |
-    rate |
-    recovery_ivl |
-    sndbuf |
-    rcvbuf |
-    rcvmore |
-    fd |
-    events |
-    type |
-    linger |
-    reconnect_ivl |
-    backlog |
-    reconnect_ivl_max |
-    maxmsgsize |
-    sndhwm |
-    rcvhwm |
-    multicast_hops |
-    rcvtimeo |
-    sndtimeo |
-    last_endpoint |
-    router_mandatory |
-    tcp_keepalive |
-    tcp_keepalive_cnt |
-    tcp_keepalive_idle |
-    tcp_keepalive_intvl |
-    immediate |
-    xpub_verbose |
-    router_raw |
-    ipv6 |
-    mechanism |
-    plain_server |
-    plain_username |
-    plain_password |
-    curve_server |
-    curve_publickey |
-    curve_secretkey |
-    curve_serverkey |
-    probe_router |
-    req_correlate |
-    req_relaxed |
-    conflate |
-    zap_domain |
-    router_handover |
-    tos |
-    connect_routing_id |
-    gssapi_server |
-    gssapi_principal |
-    gssapi_service_principal |
-    gssapi_plaintext |
-    handshake_ivl |
-    socks_proxy |
-    xpub_nodrop |
-    xpub_manual |
-    xpub_welcome_msg |
-    stream_notify |
-    invert_matching |
-    heartbeat_ivl |
-    heartbeat_ttl |
-    heartbeat_timeout |
-    xpub_verboser |
-    connect_timeout |
-    tcp_maxrt |
-    thread_safe |
-    multicast_maxtpdu |
-    vmci_buffer_size |
-    vmci_buffer_min_size |
-    vmci_buffer_max_size |
-    vmci_connect_timeout |
-    use_fd |
-    gssapi_principal_nametype |
-    gssapi_service_principal_nametype |
-    bindtodevice |
+-type erlzmq_sockopt() ::
+    affinity | routing_id | subscribe | unsubscribe | rate | recovery_ivl |
+    sndbuf | rcvbuf | rcvmore | fd | events | type | linger | reconnect_ivl |
+    backlog | reconnect_ivl_max | maxmsgsize | sndhwm | rcvhwm | multicast_hops |
+    rcvtimeo | sndtimeo | last_endpoint | router_mandatory | tcp_keepalive |
+    tcp_keepalive_cnt | tcp_keepalive_idle | tcp_keepalive_intvl | immediate |
+    xpub_verbose | router_raw | ipv6 | mechanism | plain_server | plain_username |
+    plain_password | curve_server | curve_publickey | curve_secretkey |
+    curve_serverkey | probe_router | req_correlate | req_relaxed | conflate |
+    zap_domain | router_handover | tos | connect_routing_id | gssapi_server |
+    gssapi_principal | gssapi_service_principal | gssapi_plaintext | handshake_ivl |
+    socks_proxy | xpub_nodrop | xpub_manual | xpub_welcome_msg | stream_notify |
+    invert_matching | heartbeat_ivl | heartbeat_ttl | heartbeat_timeout |
+    xpub_verboser | connect_timeout | tcp_maxrt | thread_safe | multicast_maxtpdu |
+    vmci_buffer_size | vmci_buffer_min_size | vmci_buffer_max_size |
+    vmci_connect_timeout | use_fd | gssapi_principal_nametype |
+    gssapi_service_principal_nametype | bindtodevice |
     % deprecated
-    ipv4only |
-    tcp_accept_filter |
-    connect_rid |
-    delay_attach_on_connect |
-    noblock |
-    fail_unroutable |
-    router_behavior |
-    identity.
+    ipv4only | tcp_accept_filter | connect_rid | delay_attach_on_connect |
+    noblock | fail_unroutable | router_behavior | identity |
+    % DRAFT socket options
+    zap_enforce_domain | loopback_fastpath | socks_username | socks_password |
+    multicast_loop | router_notify | xpub_manual_last_value | in_batch_size |
+    out_batch_size | wss_key_pem | wss_cert_pem | wss_trust_pem | wss_hostname |
+    wss_trust_system | only_first_subscribe | reconnect_stop | hello_msg |
+    disconnect_msg | priority | busy_poll | hiccup_msg | xsub_verbose_unsubscribe |
+    norm_mode | norm_unicast_nack | norm_buffer_size | norm_segment_size |
+    norm_block_size | norm_num_parity | norm_num_autoparity | norm_push.
 
 
 %% Possible option values for {@link erlzmq:setsockopt/3. setsockopt/3}.
@@ -304,20 +291,12 @@
 %% <i>For more information see
 %% <a href="http://api.zeromq.org/master:zmq_ctx_set">zmq_ctx_set</a>
 %% and <a href="http://api.zeromq.org/master:zmq_ctx_get">zmq_ctx_get</a></i>
-
 -type erlzmq_ctxopt() ::
-    blocky |
-    io_threads |
-    thread_sched_policy |
-    thread_priority |
-    thread_affinity_cpu_add |
-    thread_affinity_cpu_remove |
-    thread_name_prefix |
-    max_msgsz |
-    msg_t_size |
-    socket_limit |
-    max_sockets |
-    ipv6.
+    blocky | io_threads | thread_sched_policy | thread_priority |
+    thread_affinity_cpu_add | thread_affinity_cpu_remove | thread_name_prefix |
+    max_msgsz | msg_t_size | socket_limit | max_sockets | ipv6 |
+    % DRAFT context option
+    zero_copy_recv.
 
 %% 0MQ library capabilities {@link erlzmq:has/1. has/1}.
 -type erlzmq_capability() ::
