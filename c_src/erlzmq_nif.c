@@ -610,7 +610,7 @@ NIF(erlzmq_nif_socket_command)
             memcpy(req.in.setsockopt.value.bytes.data, value_binary.data, 40);
             req.in.setsockopt.value.bytes.data[40] = 0;
             req.in.setsockopt.value.bytes.size = 41;
-            req.in.setsockopt.option_len = 40;
+            req.in.setsockopt.option_len = 41;
           } else {
             free_socket_request(&req);
             enif_mutex_unlock(socket->mutex);
