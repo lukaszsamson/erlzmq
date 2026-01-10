@@ -237,10 +237,16 @@ NIF(erlzmq_nif_context)
     enif_release_resource(context);
     return return_zmq_errno(env, ENOMEM);
   }
-  context->context_zmq = zmq_init(thread_count);
+  context->context_zmq = zmq_ctx_new();
   if (! context->context_zmq) {
     enif_release_resource(context);
     return return_zmq_errno(env, zmq_errno());
+  }
+  if (zmq_ctx_set(context->context_zmq, ZMQ_IO_THREADS, thread_count) != 0) {
+    int err = zmq_errno();
+    zmq_ctx_term(context->context_zmq);
+    enif_release_resource(context);
+    return return_zmq_errno(env, err);
   }
 
   context->socket_index = 0;
@@ -1645,7 +1651,7 @@ NIF(erlzmq_nif_term)
 
   enif_mutex_unlock(context->mutex);
 
-  if (zmq_term(context->context_zmq) != 0) {
+  if (zmq_ctx_term(context->context_zmq) != 0) {
     int const error = zmq_errno();
     
     enif_mutex_lock(context->mutex);
