@@ -2439,7 +2439,9 @@ static void socket_exec_request(erlzmq_socket_t *socket, const erlzmq_socket_req
       int64_t value_int64;
       uint64_t value_uint64;
       int value_int;
-      char option_value[256];
+      // Buffer for string/binary options. 1024 bytes handles long IPC paths
+      // and other string options (ZMQ_LAST_ENDPOINT, ZMQ_ZAP_DOMAIN, etc.)
+      char option_value[1024];
       size_t option_len;
 
       switch (option_name) {
