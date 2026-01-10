@@ -2549,7 +2549,6 @@ static void socket_exec_request(erlzmq_socket_t *socket, const erlzmq_socket_req
         case ZMQ_PLAIN_SERVER:
         case ZMQ_MECHANISM:
         #endif
-        case ZMQ_FD:
         case ZMQ_IPV4ONLY:
           option_len = sizeof(value_int);
           if (zmq_getsockopt(socket->socket_zmq, option_name, &value_int, &option_len) != 0) {
@@ -2560,6 +2559,33 @@ static void socket_exec_request(erlzmq_socket_t *socket, const erlzmq_socket_req
           reply->kind = ERLZMQ_SOCKET_REPLY_INT;
           reply->out.i32 = value_int;
           return;
+        case ZMQ_FD:
+        #if defined(_WIN32)
+          // On Windows, ZMQ_FD returns SOCKET type (UINT_PTR)
+          {
+            uint64_t value_socket;
+            option_len = sizeof(value_socket);
+            if (zmq_getsockopt(socket->socket_zmq, option_name, &value_socket, &option_len) != 0) {
+              reply->err = zmq_errno();
+              return;
+            }
+            reply->ok = 1;
+            reply->kind = ERLZMQ_SOCKET_REPLY_UINT64;
+            reply->out.u64 = value_socket;
+            return;
+          }
+        #else
+          // On POSIX, ZMQ_FD returns int (file descriptor)
+          option_len = sizeof(value_int);
+          if (zmq_getsockopt(socket->socket_zmq, option_name, &value_int, &option_len) != 0) {
+            reply->err = zmq_errno();
+            return;
+          }
+          reply->ok = 1;
+          reply->kind = ERLZMQ_SOCKET_REPLY_INT;
+          reply->out.i32 = value_int;
+          return;
+        #endif
         default:
           reply->err = EINVAL;
           return;
