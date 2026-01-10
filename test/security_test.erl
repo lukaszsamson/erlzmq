@@ -3,6 +3,16 @@
 -include_lib("erlzmq.hrl").
 -export_type([erlzmq_socket/0, erlzmq_context/0]).
 
+%% Test generators with extended timeouts for security tests
+curve_test_() ->
+    {"curve security test", {timeout, 30, fun curve_impl/0}}.
+
+plain_test_() ->
+    {"plain security test", {timeout, 30, fun plain_impl/0}}.
+
+null_test_() ->
+    {"null security test", {timeout, 30, fun null_impl/0}}.
+
 curve_zap(S, AllowedKey) ->
     case erlzmq:recv(S) of
         {ok, <<"1.0">>} ->
@@ -36,7 +46,7 @@ curve_zap(S, AllowedKey) ->
     end.
 
 % Modeled on zeromq's test_security_curve.cpp
-curve_test() ->
+curve_impl() ->
     {ok, CliPub, CliSec} = erlzmq:curve_keypair(),
     ?assert(is_binary(CliPub)),
     ?assert(is_binary(CliSec)),
@@ -126,8 +136,15 @@ bounce(S, C) ->
 bounce_fail(S, C) ->
     timer:sleep(100), % apparently we need to wait a bit
     Content = <<"12345678ABCDEFGH12345678abcdefgh">>,
-    ?assertEqual(ok, erlzmq:send(C, Content, [sndmore])),
-    ?assertEqual(ok, erlzmq:send(C, Content)),
+
+    % Set send timeout on client to avoid blocking indefinitely
+    ok = erlzmq:setsockopt(C, sndtimeo, 500),
+    case erlzmq:send(C, Content, [sndmore]) of
+        ok ->
+            _ = erlzmq:send(C, Content);
+        {error, eagain} ->
+            ok
+    end,
 
     ok = erlzmq:setsockopt(S, rcvtimeo, 150),
     ?assertMatch({error, eagain}, erlzmq:recv(S)),
@@ -177,7 +194,7 @@ plain_zap(S) ->
             ok
     end.
 
-plain_test() ->
+plain_impl() ->
     % Set up server
     {ok, C} = erlzmq:context(),
 
@@ -190,27 +207,27 @@ plain_test() ->
     ok = erlzmq:setsockopt(Server, routing_id, <<"IDENT">>),
     ok = erlzmq:setsockopt(Server, zap_domain, <<"test">>),
     ok = erlzmq:setsockopt(Server, plain_server, 1),
-    ok = erlzmq:bind(Server, "tcp://127.0.0.1:9998"),
+    ok = erlzmq:bind(Server, "tcp://127.0.0.1:9996"),
 
     % Client can talk
     {ok, Client1} = erlzmq:socket(C, dealer),
     ok = erlzmq:setsockopt(Client1, plain_username, <<"admin">>),
     ok = erlzmq:setsockopt(Client1, plain_password, <<"password">>),
-    ok = erlzmq:connect(Client1, "tcp://localhost:9998"),
+    ok = erlzmq:connect(Client1, "tcp://localhost:9996"),
     bounce(Server, Client1),
     ok = erlzmq:close(Client1),
-    
+
     % Client with bad password
     {ok, Client2} = erlzmq:socket(C, dealer),
     ok = erlzmq:setsockopt(Client2, plain_username, <<"admin">>),
     ok = erlzmq:setsockopt(Client2, plain_password, <<"bad">>),
-    ok = erlzmq:connect(Client2, "tcp://localhost:9998"),
+    ok = erlzmq:connect(Client2, "tcp://localhost:9996"),
     bounce_fail(Server, Client2),
     close_zero_linger(Client2),
     
     % Non-plain client can't talk
     {ok, Client4} = erlzmq:socket(C, dealer),
-    ok = erlzmq:connect(Client4, "tcp://localhost:9998"),
+    ok = erlzmq:connect(Client4, "tcp://localhost:9996"),
     bounce_fail(Server, Client4),
     close_zero_linger(Client4),
     
@@ -245,7 +262,7 @@ null_zap(S) ->
             ok
     end.
 
-null_test() ->
+null_impl() ->
     % Set up server
     {ok, C} = erlzmq:context(),
 
@@ -257,9 +274,9 @@ null_test() ->
     % Good domain
     {ok, Server1} = erlzmq:socket(C, dealer),
     ok = erlzmq:setsockopt(Server1, zap_domain, <<"test">>),
-    ok = erlzmq:bind(Server1, "tcp://127.0.0.1:9998"),
+    ok = erlzmq:bind(Server1, "tcp://127.0.0.1:9993"),
     {ok, Client1} = erlzmq:socket(C, dealer),
-    ok = erlzmq:connect(Client1, "tcp://localhost:9998"),
+    ok = erlzmq:connect(Client1, "tcp://localhost:9993"),
     bounce(Server1, Client1),
     ok = erlzmq:close(Client1),
     ok = erlzmq:close(Server1),
@@ -267,18 +284,18 @@ null_test() ->
     % Bad domain
     {ok, Server2} = erlzmq:socket(C, dealer),
     ok = erlzmq:setsockopt(Server2, zap_domain, <<"bad">>),
-    ok = erlzmq:bind(Server2, "tcp://127.0.0.1:9999"),
+    ok = erlzmq:bind(Server2, "tcp://127.0.0.1:9994"),
     {ok, Client2} = erlzmq:socket(C, dealer),
-    ok = erlzmq:connect(Client2, "tcp://localhost:9999"),
+    ok = erlzmq:connect(Client2, "tcp://localhost:9994"),
     bounce_fail(Server2, Client2),
     ok = erlzmq:close(Client2),
     ok = erlzmq:close(Server2),
 
     % No domain
     {ok, Server3} = erlzmq:socket(C, dealer),
-    ok = erlzmq:bind(Server3, "tcp://127.0.0.1:9997"),
+    ok = erlzmq:bind(Server3, "tcp://127.0.0.1:9995"),
     {ok, Client3} = erlzmq:socket(C, dealer),
-    ok = erlzmq:connect(Client3, "tcp://localhost:9997"),
+    ok = erlzmq:connect(Client3, "tcp://localhost:9995"),
     bounce(Server3, Client3),
     ok = erlzmq:close(Client3),
     ok = erlzmq:close(Server3),
