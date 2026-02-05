@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.0] - 2026-02-05
+
+### Added
+
+- Support for draft socket types and options
+- OTP 28 added to CI matrix
+
+### Fixed
+
+- Fixed deprecated API usages
+- Fixed buffer overrun
+- Fixed flaky test
+- Improved resource management
+- Increased buffer size
+- Fixed ZMQ_FD type mismatch on Windows
+- Fixed data races
+- Avoided accessing NIF env from other threads
+- Fixed build on modern macOS
+
 ## [4.1.4] - 2024-06-02
 
 ### Fixed
